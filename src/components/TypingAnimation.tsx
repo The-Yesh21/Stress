@@ -36,7 +36,7 @@ export const TypingAnimation = () => {
   return (
     <div className="h-8 flex items-center justify-center">
       <motion.p 
-        className="text-brand-green/80 font-mono text-lg md:text-xl"
+        className="text-brand-green/80 font-mono text-lg md:text-xl italic"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >

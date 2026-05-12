@@ -39,25 +39,35 @@ export const Hero: React.FC<HeroProps> = ({ onStartAssessment }) => {
         >
           Understand Your Mind. <br />
           <motion.span 
-            className="text-gradient italic inline-block"
+            className="text-gradient italic inline-flex items-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1, duration: 1 }}
           >
-            {"Measure Your Stress.".split("").map((char, i) => (
+            {"Measure Your Stress".split("").map((char, i) => (
               <motion.span
                 key={i}
-                initial={{ opacity: 0, x: -5 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{
-                  delay: 1.2 + (i * 0.08),
-                  duration: 0.2,
+                  delay: 1.2 + (i * 0.1),
+                  duration: 0.1,
                   ease: "easeOut"
                 }}
               >
-                {char}
+                {char === " " ? "\u00A0" : char}
               </motion.span>
             ))}
+            <motion.span
+              animate={{ opacity: [1, 0] }}
+              transition={{ 
+                duration: 0.8, 
+                repeat: Infinity, 
+                ease: "steps(2)",
+                delay: 3.2 
+              }}
+              className="inline-block w-[3px] h-[0.7em] bg-brand-green ml-2"
+            />
           </motion.span>
         </motion.h1>
         
