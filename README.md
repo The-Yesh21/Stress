@@ -1,8 +1,5 @@
 # <img src="./public/favicon.svg" width="32" height="32" /> StressAI
 
-<p align="center">
-  <img src="./Screenshot%202026-05-11%20233251.png" alt="StressAI Banner" width="800" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />
-</p>
 
 <p align="center">
   <strong>An AI-powered multi-modal stress assessment platform.</strong>
