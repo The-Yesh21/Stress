@@ -63,7 +63,7 @@ export const Hero: React.FC<HeroProps> = ({ onStartAssessment }) => {
               transition={{ 
                 duration: 0.8, 
                 repeat: Infinity, 
-                ease: "steps(2)",
+                ease: "linear",
                 delay: 3.2 
               }}
               className="inline-block w-[3px] h-[0.7em] bg-brand-green ml-2"

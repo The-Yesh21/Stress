@@ -7,12 +7,16 @@ export class StressModel {
 
   constructor() {
     this.model = tf.sequential();
-    this.model.add(tf.layers.dense({ units: 8, activation: 'relu', inputShape: [4] }));
-    this.model.add(tf.layers.dense({ units: 4, activation: 'relu' }));
+    
+    // Deeper architecture for better feature extraction
+    this.model.add(tf.layers.dense({ units: 16, activation: 'relu', inputShape: [4] }));
+    this.model.add(tf.layers.dropout({ rate: 0.1 }));
+    this.model.add(tf.layers.dense({ units: 12, activation: 'relu' }));
+    this.model.add(tf.layers.dense({ units: 8, activation: 'relu' }));
     this.model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
 
     this.model.compile({
-      optimizer: tf.train.adam(),
+      optimizer: tf.train.adam(0.001),
       loss: 'binaryCrossentropy',
       metrics: ['accuracy'],
     });
@@ -21,28 +25,28 @@ export class StressModel {
   async trainWithSyntheticData() {
     if (this.isTrained) return;
 
-    const samples = 1000;
+    const samples = 1500;
     const inputs: number[][] = [];
     const labels: number[][] = [];
 
     for (let i = 0; i < samples; i++) {
       const isStressed = Math.random() > 0.5;
       if (isStressed) {
-        // Stressed profile: High values, erratic
+        // Stressed profile: High values, erratic movements, rapid typing bursts
         inputs.push([
-          Math.random() * 500 + 500, // mouseSpeed: 500-1000
-          Math.random() * 300 + 200, // mouseJitter: 200-500
-          Math.random() * 4 + 1,     // clickRate: 1-5
-          Math.random() * 400 + 400  // typingSpeed: 400-800
+          Math.random() * 600 + 700, // mouseSpeed: 700-1300
+          Math.random() * 400 + 250, // mouseJitter: 250-650
+          Math.random() * 5 + 1.5,   // clickRate: 1.5-6.5
+          Math.random() * 500 + 450  // typingSpeed: 450-950
         ]);
         labels.push([1]);
       } else {
-        // Relaxed profile: Lower values, smooth
+        // Relaxed profile: Lower values, smooth movements, steady typing
         inputs.push([
-          Math.random() * 200 + 50,  // mouseSpeed: 50-250
-          Math.random() * 50 + 10,   // mouseJitter: 10-60
-          Math.random() * 0.5,       // clickRate: 0-0.5
-          Math.random() * 200 + 100  // typingSpeed: 100-300
+          Math.random() * 250 + 50,  // mouseSpeed: 50-300
+          Math.random() * 60 + 10,   // mouseJitter: 10-70
+          Math.random() * 0.8,       // clickRate: 0-0.8
+          Math.random() * 250 + 100  // typingSpeed: 100-350
         ]);
         labels.push([0]);
       }
@@ -52,7 +56,7 @@ export class StressModel {
     const ys = tf.tensor2d(labels);
 
     await this.model.fit(xs, ys, {
-      epochs: 20,
+      epochs: 35,
       batchSize: 32,
       shuffle: true,
       verbose: 0
@@ -61,15 +65,15 @@ export class StressModel {
     xs.dispose();
     ys.dispose();
     this.isTrained = true;
-    console.log('Stress detection model trained with synthetic data.');
+    console.log('Stress detection model trained with improved synthetic data.');
   }
 
   private normalize(data: number[][]): number[][] {
-    // Basic min-max normalization based on expected ranges
-    // mouseSpeed: 0-2000, mouseJitter: 0-1000, clickRate: 0-10, typingSpeed: 0-1000
+    // Robust normalization based on calibrated ranges
+    // mouseSpeed: 0-1500, mouseJitter: 0-800, clickRate: 0-10, typingSpeed: 0-1000
     return data.map(row => [
-      Math.min(row[0] / 2000, 1),
-      Math.min(row[1] / 1000, 1),
+      Math.min(row[0] / 1500, 1),
+      Math.min(row[1] / 800, 1),
       Math.min(row[2] / 10, 1),
       Math.min(row[3] / 1000, 1)
     ]);

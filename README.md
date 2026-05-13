@@ -55,6 +55,45 @@ npm run dev
 
 ## 🧠 The Science Behind It
 
+### 4. Launch Facial Backend
+```bash
+cd backend
+python -m uvicorn app:app --reload
+```
+
+The backend can optionally call NVIDIA NIM to rewrite the final report note. Create `backend/.env` and add your key:
+
+```env
+NGC_API_KEY=nvapi-your-key-here
+```
+
+If the key is missing or rejected, facial analysis still works and the backend uses its built-in rule-based note.
+
+### 5. Train the Local Stress Model
+Create labeled image folders:
+
+```text
+backend/training_data/low_stress/
+backend/training_data/high_stress/
+```
+
+You can put face images into each folder manually, or capture webcam frames:
+
+```bash
+cd backend
+python capture_training_frames.py low_stress
+python capture_training_frames.py high_stress
+```
+
+Then train and test:
+
+```bash
+cd backend
+python train_stress_model.py --target stress_binary --drop-ambiguous --max-per-class 0 --classifier sgd --class-weight none --alpha 0.0001
+```
+
+The script prints a classification report and saves `backend/models/stress_model.joblib`. When that file exists, the backend automatically uses it with the existing facial metrics.
+
 StressAI operates on two primary data streams:
 
 1.  **Cognitive Load (Behavioral)**: Based on the *Fitts' Law* and typing variability studies, we measure the precision of movements which degrades under high stress.
