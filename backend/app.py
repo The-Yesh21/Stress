@@ -159,28 +159,8 @@ def empty_expressions() -> dict[str, float]:
 
 
 def get_emotion_model() -> HSEmotionRecognizer | None:
-    global emotion_model
-
-    if HSEmotionRecognizer is None:
-        return None
-
-    if emotion_model is None:
-        init_errors: list[str] = []
-        for model_name in ("enet_b0_8_best_afew", "enet_b0_8_best_vgaf"):
-            try:
-                emotion_model = HSEmotionRecognizer(model_name=model_name)
-                break
-            except Exception as exc:
-                init_errors.append(f"{model_name}: {exc}")
-
-        if emotion_model is None:
-            logger.error(
-                "Failed to initialize emotion model. Falling back to heuristic expression estimation. Attempts: %s",
-                " | ".join(init_errors),
-            )
-            return None
-
-    return emotion_model
+    # Force disabled for memory efficiency on Render free tier
+    return None
 
 
 def get_stress_ml_model() -> Any | None:
