@@ -607,22 +607,18 @@ def analyze_video_file(video_path: str, max_duration_seconds: float = 10.0) -> d
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting StressAI Facial Backend...")
-    model = get_stress_ml_model()
-    if model:
-        logger.info("✓ Stress ML model loaded successfully.")
-    else:
-        logger.warning("✗ Stress ML model not found at %s. Running in heuristic-only mode.", DEFAULT_MODEL_PATH)
-    
-    emotion_engine = get_emotion_model()
-    if emotion_engine:
-        logger.info("✓ Emotion recognition engine initialized.")
-    else:
-        logger.warning("✗ Emotion recognition engine failed to load. Using fallback expressions.")
-
+    # We will lazy-load models on the first request to save memory during startup
+    logger.info("Models will be initialized on first use to conserve RAM.")
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    # Check if models are loaded for status reporting, but don't force load them here
+    status = {
+        "status": "ok",
+        "stress_model_loaded": stress_ml_model is not None,
+        "emotion_model_loaded": emotion_model is not None
+    }
+    return status
 
 
 @app.post("/api/facial/session", response_model=CreateSessionResponse)
