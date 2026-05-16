@@ -87,6 +87,9 @@ class FacialMetricsResponse(BaseModel):
     expressions: dict[str, float]
     stressScore: float
     fatigueScore: float
+    depressionScore: float
+    anxietyScore: float
+    frustrationScore: float
     darkCircles: float
     dullness: float
     tensionIndex: float
@@ -134,7 +137,7 @@ emotion_model: HSEmotionRecognizer | None = None
 stress_ml_model: Any | None = None
 NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 NVIDIA_MODEL = "google/gemma-4-31b-it"
-NVIDIA_API_KEY_ENV = "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"
+NVIDIA_API_KEY_ENV = "NVIDIA_API_KEY"
 NVIDIA_NGC_API_KEY_ENV = "NGC_API_KEY"
 
 
@@ -442,6 +445,9 @@ def analyze_frame_payload(image: np.ndarray) -> dict[str, Any]:
             "expressions": empty_expressions(),
             "stressScore": 0.0,
             "fatigueScore": 0.0,
+            "depressionScore": 0.0,
+            "anxietyScore": 0.0,
+            "frustrationScore": 0.0,
             "darkCircles": 0.0,
             "dullness": 0.0,
             "tensionIndex": 0.0,
@@ -487,12 +493,20 @@ def analyze_frame_payload(image: np.ndarray) -> dict[str, Any]:
     else:
         logger.info(f"Frame Analysis (No ML): Heuristic={stress_score_heuristic:.2f}")
 
+    # Calculate derived mental state scores
+    depression_score = clamp(expressions["sad"] * 0.7 + (fatigue_score / 100) * 0.3 - expressions["happy"] * 0.2, 0.0, 1.0)
+    anxiety_score = clamp(expressions["fearful"] * 0.6 + clamp(abs(tension_index - 0.82) / 0.42, 0.0, 1.0) * 0.4, 0.0, 1.0)
+    frustration_score = clamp(expressions["angry"] * 0.7 + expressions["disgusted"] * 0.3, 0.0, 1.0)
+
     return {
         "faceDetected": True,
         "dominantEmotion": dominant_emotion.title(),
         "expressions": {key: round(value, 4) for key, value in expressions.items()},
         "stressScore": round(stress_score, 4),
         "fatigueScore": round(fatigue_score, 2),
+        "depressionScore": round(depression_score, 4),
+        "anxietyScore": round(anxiety_score, 4),
+        "frustrationScore": round(frustration_score, 4),
         "darkCircles": round(dark_circles, 2),
         "dullness": round(dullness, 2),
         "tensionIndex": tension_index,
@@ -513,22 +527,39 @@ def summarize_session(frames: list[dict[str, Any]]) -> dict[str, Any]:
             "expressions": empty_expressions(),
             "stressScore": 0.0,
             "fatigueScore": 0.0,
+            "depressionScore": 0.0,
+            "anxietyScore": 0.0,
+            "frustrationScore": 0.0,
             "darkCircles": 0.0,
             "dullness": 0.0,
             "tensionIndex": 0.0,
             "note": "No stable face was detected for long enough during the scan. Stay centered, face the camera directly, and improve lighting.",
         }
 
+    # Stabilized aggregation using truncated mean (reject top/bottom 5% if enough frames exist)
+    def stabilized_mean(values: list[float]) -> float:
+        if len(values) < 10:
+            return float(np.mean(values))
+        sorted_values = sorted(values)
+        trim = max(1, int(len(values) * 0.05))
+        return float(np.mean(sorted_values[trim:-trim]))
+
     expressions = {
         key: round(float(np.mean([frame["expressions"][key] for frame in detected_frames])), 4)
         for key in EMOTION_KEYS
     }
     dominant_emotion = max(expressions, key=expressions.get).title()
-    stress_score = float(np.mean([frame["stressScore"] for frame in detected_frames]))
-    fatigue_score = float(np.mean([frame["fatigueScore"] for frame in detected_frames]))
+    
+    stress_score = stabilized_mean([frame["stressScore"] for frame in detected_frames])
+    fatigue_score = stabilized_mean([frame["fatigueScore"] for frame in detected_frames])
+    depression_score = stabilized_mean([frame["depressionScore"] for frame in detected_frames])
+    anxiety_score = stabilized_mean([frame["anxietyScore"] for frame in detected_frames])
+    frustration_score = stabilized_mean([frame["frustrationScore"] for frame in detected_frames])
+    
     dark_circles = float(np.mean([frame["darkCircles"] for frame in detected_frames]))
     dullness = float(np.mean([frame["dullness"] for frame in detected_frames]))
     tension_index = float(np.mean([frame["tensionIndex"] for frame in detected_frames]))
+    
     fallback_note = build_note(dominant_emotion.lower(), stress_score, fatigue_score, face_detection_rate)
     summary = {
         "faceDetected": True,
@@ -538,6 +569,9 @@ def summarize_session(frames: list[dict[str, Any]]) -> dict[str, Any]:
         "expressions": expressions,
         "stressScore": round(stress_score, 4),
         "fatigueScore": round(fatigue_score, 2),
+        "depressionScore": round(depression_score, 4),
+        "anxietyScore": round(anxiety_score, 4),
+        "frustrationScore": round(frustration_score, 4),
         "darkCircles": round(dark_circles, 2),
         "dullness": round(dullness, 2),
         "tensionIndex": round(tension_index, 2),
@@ -553,12 +587,15 @@ def analyze_video_file(video_path: str, max_duration_seconds: float = 10.0) -> d
     if not capture.isOpened():
         raise HTTPException(status_code=400, detail="Unable to open uploaded video.")
 
-    fps = capture.get(cv2.CAP_PROP_FPS)
-    fps = fps if fps and fps > 0 else 24.0
+    # Use a fixed FPS if detection is unreliable to ensure deterministic sampling
+    fps_raw = capture.get(cv2.CAP_PROP_FPS)
+    fps = float(fps_raw) if fps_raw and fps_raw > 0 else 24.0
+    
     total_frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
     duration_seconds = total_frames / fps if total_frames > 0 else 0.0
 
-    frame_step = max(int(round(fps * 0.75)), 1)
+    # Fixed sampling: Analyze exactly 2 frames per second for consistency
+    frame_step = max(int(round(fps / 2.0)), 1)
     max_frame_index = int(min(total_frames or fps * max_duration_seconds, fps * max_duration_seconds))
     sampled_frames: list[dict[str, Any]] = []
 
@@ -591,7 +628,7 @@ async def startup_event():
     logger.info("Models will be initialized on first use to conserve RAM.")
 
 @app.get("/health")
-def health() -> dict[str, str]:
+def health() -> dict[str, Any]:
     # Check if models are loaded for status reporting, but don't force load them here
     status = {
         "status": "ok",

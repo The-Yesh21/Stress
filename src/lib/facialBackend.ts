@@ -17,6 +17,9 @@ export interface FacialBackendMetrics {
   expressions: EmotionProfile;
   stressScore: number;
   fatigueScore: number;
+  depressionScore: number;
+  anxietyScore: number;
+  frustrationScore: number;
   darkCircles: number;
   dullness: number;
   tensionIndex: number;

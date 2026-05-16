@@ -28,6 +28,9 @@ interface AdvancedMetrics {
   dullness: number;
   tensionIndex: number;
   fatigueScore: number;
+  depressionScore: number;
+  anxietyScore: number;
+  frustrationScore: number;
 }
 
 const defaultAdvancedMetrics: AdvancedMetrics = {
@@ -35,6 +38,9 @@ const defaultAdvancedMetrics: AdvancedMetrics = {
   dullness: 0,
   tensionIndex: 0,
   fatigueScore: 0,
+  depressionScore: 0,
+  anxietyScore: 0,
+  frustrationScore: 0,
 };
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(value, max));
@@ -117,6 +123,9 @@ export const UnifiedAssessment: React.FC<UnifiedAssessmentProps> = ({ onClose })
       dullness: metrics.dullness,
       tensionIndex: metrics.tensionIndex,
       fatigueScore: metrics.fatigueScore,
+      depressionScore: metrics.depressionScore,
+      anxietyScore: metrics.anxietyScore,
+      frustrationScore: metrics.frustrationScore,
     });
     setEmotionProfile(metrics.expressions);
     setDominantEmotion(metrics.dominantEmotion);
@@ -534,6 +543,33 @@ export const UnifiedAssessment: React.FC<UnifiedAssessmentProps> = ({ onClose })
                   </div>
                   <div className="text-3xl font-black mb-2 text-white">{advancedMetrics.tensionIndex.toFixed(2)}</div>
                   <div className="text-[10px] text-gray-400">Face geometry ratio averaged across detected frames</div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6 mb-16">
+                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl border-l-4 border-l-blue-500">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="text-xs text-gray-500 uppercase font-bold text-blue-400">Depression Markers</div>
+                    <Brain size={16} className="text-blue-500" />
+                  </div>
+                  <div className="text-3xl font-black mb-2 text-white">{Math.round(advancedMetrics.depressionScore * 100)}%</div>
+                  <div className="text-[10px] text-gray-400">Heuristic based on sadness, fatigue, and low happiness</div>
+                </div>
+                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl border-l-4 border-l-yellow-500">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="text-xs text-gray-500 uppercase font-bold text-yellow-400">Anxiety/Tension</div>
+                    <AlertCircle size={16} className="text-yellow-500" />
+                  </div>
+                  <div className="text-3xl font-black mb-2 text-white">{Math.round(advancedMetrics.anxietyScore * 100)}%</div>
+                  <div className="text-[10px] text-gray-400">Heuristic based on fear and facial tension</div>
+                </div>
+                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl border-l-4 border-l-red-500">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="text-xs text-gray-500 uppercase font-bold text-red-400">Frustration Level</div>
+                    <TrendingUp size={16} className="text-red-500" />
+                  </div>
+                  <div className="text-3xl font-black mb-2 text-white">{Math.round(advancedMetrics.frustrationScore * 100)}%</div>
+                  <div className="text-[10px] text-gray-400">Heuristic based on anger and disgust cues</div>
                 </div>
               </div>
 
